@@ -1,0 +1,67 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'ch3S/frontend/**'
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'ch3S/frontend/**'
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  lint-build-and-verify:
+    name: Frontend Lint, Build & Container Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            frontend/package-lock.json
+            ch3S/frontend/package-lock.json
+
+      - name: Determine frontend directory
+        id: set-dir
+        run: |
+          if [ -d "ch3S/frontend" ]; then
+            echo "FRONTEND_DIR=ch3S/frontend" >> $GITHUB_ENV
+          else
+            echo "FRONTEND_DIR=frontend" >> $GITHUB_ENV
+          fi
+
+      - name: Install dependencies
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: npm ci
+
+      - name: Run linter
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: npm run lint
+
+      - name: Build production bundle
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: npm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify Docker build
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.FRONTEND_DIR }}
+          build-args: |
+            VITE_BACKEND_URL=/api/v1
+          push: false
+          tags: lunarnote-frontend:ci-test

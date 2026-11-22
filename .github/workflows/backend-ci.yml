@@ -1,0 +1,61 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'ch3S/backend/**'
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'ch3S/backend/**'
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  test-and-verify:
+    name: Backend Tests & Container Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            ch3S/backend/package-lock.json
+
+      - name: Determine backend directory
+        id: set-dir
+        run: |
+          if [ -d "ch3S/backend" ]; then
+            echo "BACKEND_DIR=ch3S/backend" >> $GITHUB_ENV
+          else
+            echo "BACKEND_DIR=backend" >> $GITHUB_ENV
+          fi
+
+      - name: Install dependencies
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: npm ci
+
+      - name: Run automated test suite
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: npm test
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify Docker build
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.BACKEND_DIR }}
+          push: false
+          tags: lunarnote-backend:ci-test

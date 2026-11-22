@@ -1,0 +1,154 @@
+name: Deploy to Cloud Run (CD)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: 'Deployment target environment'
+        required: true
+        default: 'production'
+
+jobs:
+  ci-check:
+    name: Run Quality Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Backend Tests
+        run: |
+          BACKEND_DIR=$([ -d "ch3S/backend" ] && echo "ch3S/backend" || echo "backend")
+          cd $BACKEND_DIR
+          npm ci
+          npm test
+
+      - name: Run Frontend Lint & Build
+        run: |
+          FRONTEND_DIR=$([ -d "ch3S/frontend" ] && echo "ch3S/frontend" || echo "frontend")
+          cd $FRONTEND_DIR
+          npm ci
+          npm run lint
+          npm run build
+
+  build-and-push:
+    name: Build & Push Images to Docker Hub
+    needs: ci-check
+    runs-on: ubuntu-latest
+    outputs:
+      backend_tag: ${{ steps.meta-backend.outputs.tags }}
+      frontend_tag: ${{ steps.meta-frontend.outputs.tags }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Determine directories
+        id: dirs
+        run: |
+          if [ -d "ch3S/backend" ]; then
+            echo "BACKEND_DIR=ch3S/backend" >> $GITHUB_ENV
+            echo "FRONTEND_DIR=ch3S/frontend" >> $GITHUB_ENV
+          else
+            echo "BACKEND_DIR=backend" >> $GITHUB_ENV
+            echo "FRONTEND_DIR=frontend" >> $GITHUB_ENV
+          fi
+
+      - name: Extract metadata for Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/lunarnote-backend
+          tags: |
+            type=sha,format=short,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.BACKEND_DIR }}
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+
+      - name: Extract metadata for Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/lunarnote-frontend
+          tags: |
+            type=sha,format=short,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.FRONTEND_DIR }}
+          build-args: |
+            VITE_BACKEND_URL=/api/v1
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+
+  deploy-cloud-run:
+    name: Deploy to Google Cloud Run
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Google Cloud Authentication
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy Backend to Cloud Run
+        run: |
+          gcloud run deploy lunarnote-backend \
+            --image=${{ secrets.DOCKERHUB_USERNAME }}/lunarnote-backend:${{ github.sha }} \
+            --region=${{ secrets.GCP_REGION || 'us-central1' }} \
+            --platform=managed \
+            --port=3000 \
+            --set-env-vars="NODE_ENV=production,PORT=3000,DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --allow-unauthenticated
+
+      - name: Get Backend URL
+        id: get-backend-url
+        run: |
+          BACKEND_URL=$(gcloud run services describe lunarnote-backend --region=${{ secrets.GCP_REGION || 'us-central1' }} --format='value(status.url)')
+          echo "BACKEND_URL=$BACKEND_URL" >> $GITHUB_ENV
+          echo "Discovered Backend Cloud Run URL: $BACKEND_URL"
+
+      - name: Deploy Frontend to Cloud Run
+        run: |
+          gcloud run deploy lunarnote-frontend \
+            --image=${{ secrets.DOCKERHUB_USERNAME }}/lunarnote-frontend:${{ github.sha }} \
+            --region=${{ secrets.GCP_REGION || 'us-central1' }} \
+            --platform=managed \
+            --port=80 \
+            --allow-unauthenticated
