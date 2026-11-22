@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types'
 import { useState } from 'react'
+import { FormattedBody } from './FormattedBody.jsx'
 import { ClockIcon, XIcon } from './Icons.jsx'
 
 const PRESET_COVERS = [
@@ -38,6 +39,7 @@ export function ArticleEditor({
   const [isCustomCategory, setIsCustomCategory] = useState(isInitialCustom)
   const [description, setDescription] = useState(initialPost?.description || '')
   const [coverImage, setCoverImage] = useState(initialPost?.coverImage || '')
+  const [coverError, setCoverError] = useState(false)
   const [tagsInput, setTagsInput] = useState(
     Array.isArray(initialPost?.tags) ? initialPost.tags.join(', ') : '',
   )
@@ -272,11 +274,14 @@ export function ArticleEditor({
               </label>
               <input
                 id="post-cover"
-                type="url"
+                type="text"
                 className="form-input"
                 placeholder="https://images.unsplash.com/photo-..."
                 value={coverImage}
-                onChange={(e) => setCoverImage(e.target.value)}
+                onChange={(e) => {
+                  setCoverImage(e.target.value)
+                  setCoverError(false)
+                }}
               />
 
               <div className="cover-presets-row">
@@ -286,22 +291,31 @@ export function ArticleEditor({
                     key={preset.label}
                     type="button"
                     className="btn-cover-preset"
-                    onClick={() => setCoverImage(preset.url)}
+                    onClick={() => {
+                      setCoverImage(preset.url)
+                      setCoverError(false)
+                    }}
                   >
                     {preset.label}
                   </button>
                 ))}
               </div>
 
-              {coverImage && (
+              {coverImage.trim() && !coverError && (
                 <div className="cover-preview-thumbnail">
                   <img
-                    src={coverImage}
+                    src={coverImage.trim()}
                     alt="Cover preview"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                    }}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    onError={() => setCoverError(true)}
                   />
+                </div>
+              )}
+
+              {coverImage.trim() && coverError && (
+                <div className="cover-error-notice">
+                  <span>⚠️ Unable to load image preview from this link. Make sure the URL points directly to an image (e.g. from Unsplash or ending in .jpg/.png).</span>
                 </div>
               )}
             </div>
@@ -358,21 +372,21 @@ export function ArticleEditor({
               <div className="preview-meta">
                 <span>By {author || 'Anonymous'}</span> • <span>{estimatedReadTime} min read</span>
               </div>
-              {coverImage && (
+              {coverImage.trim() && (
                 <div className="preview-cover-wrap">
-                  <img src={coverImage} alt="Cover preview" />
+                  <img
+                    src={coverImage.trim()}
+                    alt="Cover preview"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
                 </div>
               )}
               <div className="preview-body">
-                {contents ? (
-                  contents.split(/\n\s*\n/).map((p, idx) => (
-                    <p key={idx} className="preview-p">
-                      {p}
-                    </p>
-                  ))
-                ) : (
-                  <p className="preview-placeholder">Your content will appear here.</p>
-                )}
+                <FormattedBody content={contents} />
               </div>
             </div>
           </div>

@@ -1,4 +1,32 @@
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000/api/v1'
+/**
+ * Dynamically resolves the backend API endpoint:
+ * - When running in production on a remote domain (Render, Vercel, Netlify, Cloud Run),
+ *   it directs to the live Render backend: https://lunarnote-backend.onrender.com/api/v1
+ * - Respects explicit remote VITE_BACKEND_URL build configurations
+ * - Falls back to http://localhost:3000/api/v1 for local development
+ */
+const getBackendUrl = () => {
+  const envUrl = import.meta.env.VITE_BACKEND_URL
+
+  if (typeof window !== 'undefined') {
+    const isLocalhost =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1'
+
+    // Deployed production environment
+    if (!isLocalhost) {
+      if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+        return envUrl.replace(/\/+$/, '')
+      }
+      return 'https://lunarnote-backend.onrender.com/api/v1'
+    }
+  }
+
+  // Local development
+  return envUrl || 'http://localhost:3000/api/v1'
+}
+
+const BACKEND_URL = getBackendUrl()
 
 /**
  * Fetch paginated, filtered, and searched posts

@@ -30,6 +30,8 @@ export function PostCard({ post, layout = 'grid', onRead, onEdit, onDelete }) {
           alt={post.title}
           className="post-card-image"
           loading="lazy"
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
           onError={(e) => {
             e.currentTarget.src =
               'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=800&q=80'

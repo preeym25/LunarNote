@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types'
+import { FormattedBody } from './FormattedBody.jsx'
 import {
   ArrowLeftIcon,
   ClockIcon,
@@ -6,77 +7,6 @@ import {
   ShareIcon,
   TrashIcon,
 } from './Icons.jsx'
-
-/**
- * Lightweight safe markdown formatter
- */
-function FormattedBody({ content = '' }) {
-  if (!content) return <p className="reader-paragraph-empty">No content provided.</p>
-
-  // Split into blocks by double newlines
-  const blocks = content.split(/\n\s*\n/)
-
-  return (
-    <div className="reader-body-content">
-      {blocks.map((block, idx) => {
-        const trimmed = block.trim()
-
-        // H1
-        if (trimmed.startsWith('# ')) {
-          return <h2 key={idx} className="reader-h1">{trimmed.replace(/^#\s+/, '')}</h2>
-        }
-        // H2
-        if (trimmed.startsWith('## ')) {
-          return <h3 key={idx} className="reader-h2">{trimmed.replace(/^##\s+/, '')}</h3>
-        }
-        // H3
-        if (trimmed.startsWith('### ')) {
-          return <h4 key={idx} className="reader-h3">{trimmed.replace(/^###\s+/, '')}</h4>
-        }
-        // Blockquote
-        if (trimmed.startsWith('>')) {
-          const quoteText = trimmed.replace(/^>\s*/gm, '')
-          return (
-            <blockquote key={idx} className="reader-blockquote">
-              <p>{quoteText}</p>
-            </blockquote>
-          )
-        }
-        // Code block
-        if (trimmed.startsWith('```')) {
-          const code = trimmed.replace(/^```[a-z]*\n?|```$/gi, '')
-          return (
-            <pre key={idx} className="reader-pre">
-              <code>{code}</code>
-            </pre>
-          )
-        }
-        // Unordered list
-        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-          const items = trimmed.split('\n').filter(Boolean)
-          return (
-            <ul key={idx} className="reader-ul">
-              {items.map((item, i) => (
-                <li key={i}>{item.replace(/^[-*]\s+/, '')}</li>
-              ))}
-            </ul>
-          )
-        }
-
-        // Standard paragraph
-        return (
-          <p key={idx} className="reader-paragraph">
-            {trimmed}
-          </p>
-        )
-      })}
-    </div>
-  )
-}
-
-FormattedBody.propTypes = {
-  content: PropTypes.string,
-}
 
 export function ArticleReader({
   post,
@@ -195,6 +125,8 @@ export function ArticleReader({
           src={defaultCover}
           alt={post.title}
           className="reader-hero-image"
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
           onError={(e) => {
             e.currentTarget.src =
               'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1400&q=80'
