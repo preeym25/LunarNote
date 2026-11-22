@@ -11,7 +11,7 @@ export function PostCard({ post, layout = 'grid', onRead, onEdit, onDelete }) {
     : ''
 
   const defaultCover =
-    post.coverImage || '/celestial-moon.jpg'
+    post.coverImage || '/celestial-card-cover.jpg'
 
   return (
     <article
@@ -33,8 +33,7 @@ export function PostCard({ post, layout = 'grid', onRead, onEdit, onDelete }) {
           referrerPolicy="no-referrer"
           crossOrigin="anonymous"
           onError={(e) => {
-            e.currentTarget.src =
-              'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=800&q=80'
+            e.currentTarget.src = '/celestial-card-cover.jpg'
           }}
         />
         <div className="post-card-badge">{post.category || 'General'}</div>

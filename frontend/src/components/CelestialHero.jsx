@@ -85,11 +85,13 @@ export function CelestialHero({
           <div className="celestial-spotlight-card" onClick={() => onReadPost(featuredPost._id)}>
             <div className="spotlight-image-wrap">
               <img
-                src={featuredPost.coverImage || '/celestial-moon.jpg'}
+                src={featuredPost.coverImage || '/celestial-card-cover.jpg'}
                 alt={featuredPost.title}
                 className="spotlight-image"
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
                 onError={(e) => {
-                  e.currentTarget.src = '/celestial-moon.jpg'
+                  e.currentTarget.src = '/celestial-card-cover.jpg'
                 }}
               />
               <div className="spotlight-badge">Featured Story</div>

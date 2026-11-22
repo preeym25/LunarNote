@@ -128,8 +128,7 @@ export function ArticleReader({
           referrerPolicy="no-referrer"
           crossOrigin="anonymous"
           onError={(e) => {
-            e.currentTarget.src =
-              'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1400&q=80'
+            e.currentTarget.src = '/celestial-card-cover.jpg'
           }}
         />
       </div>

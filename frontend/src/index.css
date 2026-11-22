@@ -1867,6 +1867,17 @@ body {
   line-height: 1.4;
 }
 
+.cover-hint-notice {
+  font-size: 12px;
+  color: var(--accent);
+  background-color: var(--accent-subtle);
+  border: 1px solid var(--accent-secondary);
+  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
 .reader-tags-footer {
   margin-top: 48px;
   padding-top: 24px;

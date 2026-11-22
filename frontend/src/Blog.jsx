@@ -146,7 +146,8 @@ export function Blog() {
   // Featured article (first post when on page 1 without filters)
   const isDefaultFeed = !search && !category && !selectedAuthor && page === 1
   const featuredPost = isDefaultFeed && posts.length > 0 ? posts[0] : null
-  const feedPosts = featuredPost ? posts.slice(1) : posts
+  // Display all posts in the feed so stories are never hidden or missing from the grid
+  const feedPosts = posts
 
   // Navigation handlers
   const handleReadPost = (id) => {

@@ -61,8 +61,26 @@ export function ArticleEditor({
 
   const displayCategory = (isCustomCategory ? customCategory.trim() : category) || 'General'
 
+  const isLikelyWebpage = (url) => {
+    if (!url) return false
+    const trimmed = url.trim()
+    if (/^https?:\/\//i.test(trimmed)) {
+      const hasImageExt = /\.(jpeg|jpg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(trimmed)
+      const isKnownImageHost =
+        /(images\.unsplash\.com|cloudinary\.com|imgur\.com|media\.easemytrip\.com|encrypted-tbn0\.gstatic\.com|cdn\.)/i.test(
+          trimmed,
+        )
+      if (!hasImageExt && !isKnownImageHost && trimmed.split('/').length > 3) {
+        return true
+      }
+    }
+    return false
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
+
+    if (isSubmitting) return
 
     if (!title.trim()) {
       setValidationError('Article title is required.')
@@ -310,6 +328,12 @@ export function ArticleEditor({
                     crossOrigin="anonymous"
                     onError={() => setCoverError(true)}
                   />
+                </div>
+              )}
+
+              {coverImage.trim() && isLikelyWebpage(coverImage) && (
+                <div className="cover-hint-notice">
+                  <span>💡 Tip: This looks like a webpage URL rather than a direct image link. Right-click the image on that page and select <strong>&quot;Copy Image Address&quot;</strong> (ending in .jpg, .png, etc.).</span>
                 </div>
               )}
 
